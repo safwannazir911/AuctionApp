@@ -143,7 +143,7 @@ app.post("/create", verifyToken, async (req, res) => {
 
 
 //Get user specific listing
-app.get("/listings/user", verifyToken, async (req, res) => {
+app.get("/user/listings", verifyToken, async (req, res) => {
   try {
     const username = req.user.username;
     const user = await User.findOne({ username: username }).populate("listings");
@@ -182,6 +182,75 @@ app.get("/listings", verifyToken, async (req, res) => {
     res.status(500).json({ error: "An error occurred" });
   }
 });
+
+//Delete a listing
+
+
+
+//Delete a listing
+//req.query-> query parameters(page, api key's)
+//req.params-> parameters(id)
+//req.header-> header(bearer token)
+//req.auth-> authentication(username/password)
+app.delete("/delete/:id",verifyToken,async (req,res)=>{
+  try {
+    const listingId = req.params.id; // Access the parameter from the URL
+
+    // Use Mongoose or your preferred method to find and delete the listing by its ID
+    const deletedListing = await Listing.findByIdAndRemove(listingId);
+
+    if (!deletedListing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    // Optionally, you can return a success message or response
+    res.status(200).json({ message: 'Listing deleted successfully' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+})
+
+//Edit a listing
+app.put("/edit/:id", verifyToken, async (req, res) => {
+  try {
+    const listingId = req.params.id; // Access the listing ID from the URL route parameter
+    const { title, description, price, isForSale } = req.body;
+
+    // Use Mongoose or your preferred method to find and update the listing by its ID
+    const updatedListing = await Listing.findByIdAndUpdate(listingId, {
+      title,
+      description,
+      price,
+      isForSale,
+    });
+
+    if (!updatedListing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    res.status(200).json({ message: 'Listing updated successfully'});
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+//Get a particular listing
+app.get("/listing/:id",async(req,res)=>{
+  try{
+    const listingId=req.params.id;
+
+    const listing= await Listing.findById(listingId)
+
+    res.status(200).json({message:'Success',listing: listing})
+  }
+  catch(error){
+    console.error('Error',error);
+    res.status(500).json({error:'An error occured'})
+  }
+
+})
 
 
 //Register a new user

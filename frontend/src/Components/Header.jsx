@@ -27,9 +27,9 @@ export const Header = () => {
             <div className="collapse navbar-collapse" id="navbarNavAltMarkup">
               <div className="navbar-nav">
                 <Link to="/home" className="nav-link active" aria-current="page">Home</Link>
-                <Link to="/createlisting" className="nav-link" > Create Listing </Link>
-                <Link to="/mylistings" className="nav-link" > My Listings </Link>       
-                <Link to="/entry" className="nav-link" > Entry</Link>
+                <Link to="/createlisting" className="nav-link" >Create Listing </Link>
+                <Link to="/mylistings" className="nav-link" >My Listings </Link>       
+                <Link to="/entry" className="nav-link" >Login/Register</Link>
             </div>
             </div>
           </div>
@@ -63,7 +63,7 @@ export const Header = () => {
                 </li>
                 <li className="nav-item">
                   <Link to="/entry" className="nav-link" onClick={toggleNav}>
-                  Entry
+                  Login/Register
                   </Link>
                 </li>
               </ul>
