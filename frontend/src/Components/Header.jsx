@@ -4,6 +4,7 @@ import  Home  from './Home';
 import CreateListing from "./CreateListing"
 import MyListings from "./MyListings"
 import Entry from "./Entry"
+import ListingPage from './ListingPage';
 
 export const Header = () => {
   const [isNavOpen, setNavOpen] = useState(false);
@@ -79,6 +80,7 @@ export const Header = () => {
           <Route path="/createlisting" element={<CreateListing />} />
           <Route path="/mylistings" element={<MyListings />} />
           <Route path="/entry" element={<Entry />} />
+          <Route path="/listing/:listingId" element={<ListingPage/>} />
         </Routes>
       </div>
     </BrowserRouter>

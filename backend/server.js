@@ -5,6 +5,11 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import morgan from "morgan";
 import cors from "cors"
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import http from "http"
+import { Server } from "socket.io";
+
 
 mongoose.connect(
   process.env.MONGO_URL,
@@ -21,12 +26,25 @@ const app = express();
 //Number of salt cycles
 const salt = 10;
 
+const __dirname = dirname(fileURLToPath(import.meta.url)); // url->path(string)->dir
+
+const httpServer=http.createServer(app)
+
+//Whitelist front-end server
+const io = new Server(httpServer, {
+  cors: {
+    origin: 'http://localhost:3001', // Replace with the actual origin of your app
+    methods: ['GET', 'POST'],
+  },
+});
 
 //App Middlewares
+app.use(express.static(__dirname+"/public"));
+
 app.use(cors(
   {
     origin: "http://localhost:3001", // Replace with the actual origin of your React app
-    methods: "GET,POST,PUT,DELETE",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     allowedHeaders: "Content-Type,Authorization",
   }
 ));
@@ -192,7 +210,7 @@ app.get("/listings", verifyToken, async (req, res) => {
 //req.params-> parameters(id)
 //req.header-> header(bearer token)
 //req.auth-> authentication(username/password)
-app.delete("/delete/:id",verifyToken,async (req,res)=>{
+app.delete("/delete/:id", verifyToken, async (req, res) => {
   try {
     const listingId = req.params.id; // Access the parameter from the URL
 
@@ -229,7 +247,7 @@ app.put("/edit/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    res.status(200).json({ message: 'Listing updated successfully'});
+    res.status(200).json({ message: 'Listing updated successfully' });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'An error occurred' });
@@ -237,27 +255,49 @@ app.put("/edit/:id", verifyToken, async (req, res) => {
 });
 
 //Get a particular listing
-app.get("/listing/:id",async(req,res)=>{
-  try{
-    const listingId=req.params.id;
+app.get("/listing/:id",verifyToken, async (req, res) => {
+  try {
+    const listingId = req.params.id;
 
-    const listing= await Listing.findById(listingId)
+    const listing = await Listing.findById(listingId)
 
-    res.status(200).json({message:'Success',listing: listing})
+    res.status(200).json(listing)
   }
-  catch(error){
-    console.error('Error',error);
-    res.status(500).json({error:'An error occured'})
+  catch (error) {
+    console.error('Error', error);
+    res.status(500).json({ error: 'An error occured' })
   }
 
 })
+
+//Delete all listings
+app.get("/delete/listings",verifyToken, async (req, res) => {
+  try {
+    // Use Mongoose or your preferred method to delete all listings
+    const listing=await Listing.deleteMany({}); // This will delete all documents in the "Listing" collection
+    console.log(listing)
+    res.status(200).json({ message: 'All listings deleted successfully' });
+  } catch (error) {
+    console.error('Error', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+
+io.on("connection",(socket)=>{
+  console.log("user connected",socket.id)
+  socket.on("user-msg",(message)=>{
+      io.emit("msg",message)
+  })
+});
+
 
 
 //Register a new user
 app.post("/register", async (req, res) => {
   console.log(req.body)
   const username = req.body.username;
-  const password = req.body.password; 
+  const password = req.body.password;
   console.log(username)
   console.log(password)
   try {
@@ -325,6 +365,6 @@ app.post("/login", async (req, res) => {
 
 const port = process.env.PORT || 2000;
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });

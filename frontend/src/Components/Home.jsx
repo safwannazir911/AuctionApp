@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const Home = () => {
   const [listings, setListings] = useState([]);
@@ -29,13 +30,17 @@ const Home = () => {
       <h1 className='m-3'>All listings</h1>
       <ul>
         {listings.map((listing, index) => (
-          <div className='container border rounded m-1 p-2'>
+          <div className='container border rounded m-1 p-2' key={listing._id}>
             <h3 className='m-2'>{listing.title}</h3>
             <p className='m-2'>{listing.description}</p>
-            <button type="button" class="btn btn-light btn-sm m-2">Price: {listing.price}</button>
-            {listing.isForSale?<button className='btn btn-dark btn-sm'>Bid on item</button>:<button className='btn btn-dark btn-sm disabled'>Bid on item</button>}
-          </div>
-          
+            <button type="button" className="btn btn-light btn-sm m-2">Price: {listing.price}</button>
+            {listing.isForSale ? (
+              <Link to={`/listing/${listing._id}`}>
+                <button className='btn btn-dark btn-sm'>Bid on item</button>
+              </Link>
+            ) : (
+              <button className='btn btn-dark btn-sm disabled'>Bid on item</button>
+            )}          </div>
         ))}
       </ul>
     </div>
