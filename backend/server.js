@@ -28,7 +28,7 @@ const salt = 10;
 
 const __dirname = dirname(fileURLToPath(import.meta.url)); // url->path(string)->dir
 
-const httpServer=http.createServer(app)
+const httpServer = http.createServer(app)
 
 //Whitelist front-end server
 const io = new Server(httpServer, {
@@ -39,7 +39,7 @@ const io = new Server(httpServer, {
 });
 
 //App Middlewares
-app.use(express.static(__dirname+"/public"));
+app.use(express.static(__dirname + "/public"));
 
 app.use(cors(
   {
@@ -57,6 +57,16 @@ app.set("view engine", "ejs");
 
 
 //Schemas and modals
+const bidSchema = new mongoose.Schema({
+  amount: {
+    type: String
+  },
+  time: {
+    type: Date
+  }
+})
+const Bid = mongoose.model('Bid', bidSchema);
+
 const listingSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -73,6 +83,18 @@ const listingSchema = new mongoose.Schema({
   isForSale: {
     type: Boolean,
     default: true, // By default, a listing is for sale
+  },
+  currentBid: {
+    type: bidSchema,
+  },
+  bids: [bidSchema],
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 });
 
@@ -134,7 +156,15 @@ app.post("/create", verifyToken, async (req, res) => {
       price: price,
       isForSale: isForSale
     });
-    await listing.save()
+
+    const newBid = new Bid({
+      amount: price,
+      time: new Date(),
+    });
+
+    newBid.save();
+    listing.currentBid = newBid;
+
     // Find the user by their username
     const username = req.user.username;
     const user = await User.findOne({ username: username });
@@ -143,6 +173,9 @@ app.post("/create", verifyToken, async (req, res) => {
       // Handle the case where the user is not found
       return res.status(404).json({ error: "User not found" });
     }
+
+    listing.user = user;
+    await listing.save();
 
     // Push the new listing into the user's listings array
     user.listings.push(listing);
@@ -158,6 +191,7 @@ app.post("/create", verifyToken, async (req, res) => {
     res.status(500).json({ error: "An error occurred" });
   }
 });
+
 
 
 //Get user specific listing
@@ -210,6 +244,7 @@ app.get("/listings", verifyToken, async (req, res) => {
 //req.params-> parameters(id)
 //req.header-> header(bearer token)
 //req.auth-> authentication(username/password)
+
 app.delete("/delete/:id", verifyToken, async (req, res) => {
   try {
     const listingId = req.params.id; // Access the parameter from the URL
@@ -255,7 +290,7 @@ app.put("/edit/:id", verifyToken, async (req, res) => {
 });
 
 //Get a particular listing
-app.get("/listing/:id",verifyToken, async (req, res) => {
+app.get("/listing/:id", verifyToken, async (req, res) => {
   try {
     const listingId = req.params.id;
 
@@ -271,10 +306,10 @@ app.get("/listing/:id",verifyToken, async (req, res) => {
 })
 
 //Delete all listings
-app.get("/delete/listings",verifyToken, async (req, res) => {
+app.get("/delete/listings", verifyToken, async (req, res) => {
   try {
     // Use Mongoose or your preferred method to delete all listings
-    const listing=await Listing.deleteMany({}); // This will delete all documents in the "Listing" collection
+    const listing = await Listing.deleteMany({}); // This will delete all documents in the "Listing" collection
     console.log(listing)
     res.status(200).json({ message: 'All listings deleted successfully' });
   } catch (error) {
@@ -283,13 +318,47 @@ app.get("/delete/listings",verifyToken, async (req, res) => {
   }
 });
 
+io.on("connection", (socket) => {
+  console.log("user connected", socket.id);
 
-io.on("connection",(socket)=>{
-  console.log("user connected",socket.id)
-  socket.on("user-msg",(message)=>{
-      io.emit("msg",message)
-  })
+  socket.on('placeBid', async (bid) => {
+    try {
+      const { listingId, amount } = bid;
+
+      // Find the listing by its ID
+      const listing = await Listing.findById(listingId);
+
+      if (!listing) {
+        console.log('Listing not found');
+        return;
+      }
+
+      const newBid = new Bid({
+        amount: amount,
+        time: new Date(),
+      })
+      newBid.save()
+
+      // Update the currentBid field with the new bid
+      listing.currentBid = newBid;
+
+      // Push the bid amount to the listing's bids array
+      listing.bids.push(newBid);
+
+      // Save the updated listing to the database
+      await listing.save();
+
+      const bids = listing.bids;
+      console.log(bids)
+      // Broadcast the updated bid to all connected clients
+      io.emit('updateBid', bids);
+    } catch (error) {
+      console.error('Error processing bid:', error);
+    }
+  });
+  so
 });
+
 
 
 
